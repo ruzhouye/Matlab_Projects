@@ -1,0 +1,355 @@
+\documentclass{article}
+\usepackage[a4paper, total={6in, 8in},margin=3cm]{geometry}
+\usepackage{graphicx} %% for loading jpg figures
+% self defined
+\usepackage{amsmath}
+\usepackage{autobreak}
+%\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage[justification=centering]{caption}
+\usepackage{appendix}
+\usepackage{accents}
+%\usepackage{cite}%
+%\setcounter{MaxMatrixCols}{30}
+\newtheorem{remark}{Remark}
+\newtheorem{lemma}{Lemma}
+\newtheorem{definition}{Definition}
+\newtheorem{theorem}{Theorem}
+\newcommand{\sgn}{\text{sgn}}
+\newcommand{\tr}{\text{tr}}
+\newcommand{\diag}{\text{diag}}
+\newcommand{\ubar}[1]{\underaccent{\bar}{#1}}
+
+\title{Neural Network + RISE Control Design}
+\begin{document}
+	\maketitle
+	\section{Problem Statement}
+	System:
+	\begin{align}
+	\begin{cases}
+	\dot{x}_{1} &= x_{2} \\
+	M_{w}(x_{1})\dot{x}_{2} &= f_{1w}(x) + x_{3} + d_{1w}(x,t) \\
+	\dot{x}_{3} &= x_{4} \\
+	J_{w}\dot{x}_{4} &= f_{2w}(x) + u + d_{2w}(t)
+	\end{cases},  \label{system}
+	\end{align}
+	where $x = \left[
+	\begin{array}[c]{cccc}
+	x_{1}^{\top} & x_{2}^{\top} & x_{3}^{\top} & x_{4}^{\top}
+	\end{array}
+	\right]^{\top} \in\mathbb{R}^{8}$ is the system state, functions $f_{iw}(x)\in\mathbb{R}^{2}$ and $M_{w}(x_{1})\in\mathbb{R}^{2\times 2}>0$ represent unknown dynamics with continuously differentiable nominal models $\bar{f}_{iw}(x)$ and $\bar{M}_{w}(x_{1})$, respectively,  $J_{w}\in\mathbb{R}^{2\times 2}$ is an unknown constant parameter,  $d_{iw}\in\mathbb{R}^{2}$ are continuous transformed time-varying disturbance such that $\left\Vert d_{1w}(x,t)\right\Vert_{1}\leq \rho_{0}$ and $\left(d_{2w}(t),\dot{d}_{2w}(t)\right)\in\mathcal{L}_{\infty}$ with some known constant $\rho_{0}$.
+	
+	The control objective is to design a controller $u(t)$ to ensure a practically stable tracking of $x_{1}(t)$ to some known trajectory $x_{1d}(t)$ satisfying $\left(x_{1d},\dot{x}_{1d},\ddot{x}_{1d}\right)\in\mathcal{L}_{\infty}$.
+	
+	\section{Control Formulation}
+		We apply the Backstepping Method as follows.
+	
+	\begin{flushleft}
+		\textit{Step 1:}
+	\end{flushleft}
+	
+	Define the tracking error
+	\begin{equation}
+	e_{1}(t) = x_{1}(t)-x_{1d}(t), \label{e1}
+	\end{equation}
+	and set 
+	\begin{equation}
+	s = \dot{e}_{1} + \sigma_{1}e_{1}, \label{s}
+	\end{equation}
+	we have 
+	\begin{equation}
+	M_{w}(x_{1})\dot{s} = f_{1w}(x) + x_{3} + d_{1w}(x,t) + M_{w}(x_{1})\left(\sigma_{1}\dot{e}_{1} - \ddot{x}_{1d}\right). \label{sdot1}
+	\end{equation}
+	Define 
+	\begin{equation}
+	z_{1}(t) = x_{3}(t)-p(t), \label{z1}
+	\end{equation}
+	where $p(t)\in\mathbb{R}^{2}$ is the output of the following 3-rd order filter
+	\begin{align}
+	\begin{cases}
+	\dot{\xi} &= A\xi + BC\alpha \\
+	p &= C\xi 
+	\end{cases}, \label{filter}
+	\end{align}
+	where $\xi(t) = \left[
+	\begin{array}[c]{ccc}
+	\xi_{1}^{\top}(t) & \xi_{2}^{\top}(t) & \xi_{3}^{\top}(t)
+	\end{array}
+	\right]^{\top} \in\mathbb{R}^{6}$ is the filter state, $\alpha(t) = \left[
+	\begin{array}[c]{ccc}
+	\alpha_{1}^{\top}(t) & \dot{\alpha}_{1}^{\top}(t) & \ddot{\alpha}_{1}^{\top}(t)
+	\end{array}
+	\right]^{\top} \in\mathbb{R}^{6}$ with $\alpha_{1}(t)\in\mathbb{R}^{2}$ being the virtual control to be designed, the matrix
+	\begin{equation}
+	A = \left[
+	\begin{array}[c]{ccc}
+	\textbf{0}_{2\times 2} & I_{2\times 2} & \textbf{0}_{2\times 2} \\
+	\textbf{0}_{2\times 2} & \textbf{0}_{2\times 2} & I_{2\times 2} \\
+	\boldsymbol{a_{1}} & \boldsymbol{a_{2}} & \boldsymbol{a_{3}}
+	\end{array}
+	\right], 
+	\text{   } B = \left[
+	\begin{array}[c]{c}
+	\textbf{0}_{2\times 2} \\
+	\textbf{0}_{2\times 2} \\
+	-\boldsymbol{a_{1}}
+	\end{array}
+	\right], \text{   } C = \left[
+	\begin{array}[c]{ccc}
+	I_{2\times 2} & \textbf{0}_{2\times 2} & \textbf{0}_{2\times 2}\\
+	\end{array}
+	\right]
+	\end{equation}
+	with $\boldsymbol{a_{i}}=a_{i}I_{2\times 2}$ and $a_{i}<0$ such that $A$ is Hurwitz.
+	
+	Define 
+	\begin{equation}
+	y(t)=\xi(t) - \alpha(t), \label{y}
+	\end{equation}
+	we have
+	\begin{equation}
+	\dot{y} = Ay + \left(A+BC\right)\alpha - \dot{\alpha}. \label{ydot} 
+	\end{equation} 
+	Using (\ref{z1})-(\ref{y}), we know that
+	\begin{equation}
+	x_{3} = z_{1} + Cy + \alpha_{1}. \label{x3}
+	\end{equation}
+
+	Define $\underline{\bullet} = \bullet - \bar{\bullet}$ as the uncertain dynamics and substitute (\ref{x3}) into (\ref{sdot1}), we obtain
+	\begin{align}
+	M_w(x_{1})\dot{s} &= \bar{F}_{1}(x,s,t) + z_{1} + Cy + \alpha_{1} + D_{1}(x,s,t) + d_{1w}(x,t) \nonumber \\
+	& \quad -\frac{1}{2}\dot{\bar{M}}_{w}(x_{1})s -\frac{1}{2}\dot{\underline{M}}_{w}(x_{1})s, \label{sdot2}
+	\end{align} 
+	where 
+	\begin{align}
+	\begin{cases}
+	\bar{F}_{1}{x,s,t} &= \bar{f}_{1w}(x) + \bar{M}_{w}(x_{1})\left(\sigma_{1}\dot{e}_{1} - \ddot{x}_{1d}\right) + \frac{1}{2}\dot{\bar{M}}_{w}(x_{1})s \\
+	D_{1}(x,s,t) &= \underline{f}_{1w}(x) + \underline{M}_{w}(x_{1})\left(\sigma_{1}\dot{e}_{1} - \ddot{x}_{1d}\right)+ \frac{1}{2}\dot{\underline{M}}_{w}(x_{1})s,
+	\end{cases}
+	\end{align}
+	and $\dot{M}_{w}(x_{1}) = \dot{\bar{M}}_{w}(x_{1}) + \dot{\underline{M}}_{w}(x_{1}) = \frac{\partial M_{w}(x_{1})}{\partial x_{1}}x_{2}$. Note that $D_{1}(x,s,t)$ is the unknown dynamics without explicit $t$ from any unknown time-varying functions, we are encouraged to apply RBFNN to approximate it by
+	\begin{equation}
+	D_{1}(x,s,t) = W^{\top}\Lambda\left(\bar{Z}\right) + \delta\left(\bar{Z}\right), \label{NN}
+	\end{equation}
+	with $W\in\mathbb{R}^{l\times 2}$ being the ideal output layer weight and $\Lambda\left(\bar{Z}\right) = \left[
+	\begin{array}[c]{cccc}
+	\lambda_{1}\left(\bar{Z}\right) & \lambda_{2}\left(\bar{Z}\right) & \cdots & \lambda_{l}\left(\bar{Z}\right)
+	\end{array}
+	\right]^{\top}$, where $l>0$ is the neuro number of the hidden layer, and the NN input vector $\bar{Z} = \left[
+	\begin{array}[c]{cc}
+	Z^{\top} & 1
+	\end{array}	
+	\right]^{\top}$ with $Z = \left[
+	\begin{array}[c]{cccc}
+	x^{\top} & \dot{e}^{\top}_{1} & \ddot{x}^{\top}_{1d} & s^{\top}
+	\end{array}
+	\right]^{\top}\in\mathbb{R}^{8}$, each $\lambda_{i}\left(\bar{Z}\right)$ is the Gaussian function 
+	\begin{equation}
+	\lambda_{i}\left(\bar{Z}\right) = e^{-\frac{\left(\bar{Z}-c\right)^{\top}\left(\bar{Z}-c\right)}{2b^{2}}}
+	\end{equation}
+	with $c\in\mathbb{R}^{9}$ and $b\in\mathbb{R}^{9}$ being the center and the shape factor, respectively,
+	$\delta\left(Z\right)\in\mathbb{R}^{2}$ is the NN approximation error such that 
+	\begin{equation}
+	\left\Vert\delta\left(Z\right)\right\Vert_{2} \leq \bar{\delta}
+	\end{equation}
+	with $\bar{\delta}>0$ being some unknown constant.
+	
+	Design the NN virtual control
+	\begin{equation}
+	\alpha_{1} = -\bar{F}_{1}(x,s,t)- K_{1}s - \hat{W}^{\top}(t)\Lambda\left(\bar{Z}\right) - \rho\text{Tanh}\left(\frac{s}{\epsilon}\right), \label{alpha1}
+	\end{equation}
+	where $K_{1}\in\mathbb{R}^{2\times 2}>0$, $\epsilon>0$ and $\rho\geq \rho_{0}+\bar{\delta}$ are control gains, $\hat{W}(t)\in\mathbb{R}^{l\times 2}$ is the online estimate of the unknown NN weight $W$, and $\text{Tanh}\left(s/\epsilon\right) = \left[
+	\begin{array}[c]{cc}
+	\tanh\left(s_{1}/\epsilon\right) & \tanh\left(s_{2}/\epsilon\right)
+	\end{array}
+	\right]^{\top}$. Substituting (\ref{alpha1}) into (\ref{sdot2}) gives
+	\begin{align}
+	M_{w}(x_{1})\dot{s} &= -K_{1}s - \tilde{W}^{\top}(t)\Lambda\left(\bar{Z}\right) + \left(\delta\left(Z\right)+d_{1w}(x,t) - \rho\text{Tanh}\left(\frac{s}{\epsilon}\right)\right)  \nonumber \\
+	& \quad +z_{1} + Cy-\frac{1}{2}\dot{\bar{M}}_{w}(x_{1})s -\frac{1}{2}\dot{\underline{M}}_{w}(x_{1})s \label{sdot3}
+	\end{align}
+	where $\tilde{W}(t) = \hat{W}(t)-W$ is the NN weight estimate error.
+	
+	Define a positive definite function
+	\begin{equation}
+	V_{1} = \frac{1}{2}s^{\top}M_{w}(x_{1})s + \frac{1}{2\gamma}\tr\left\{\tilde{W}^{\top}\Gamma^{-1}\tilde{W}\right\} + \frac{1}{2}z_{1}^{\top}z_{1} + y^{\top}Py, \label{V1}
+	\end{equation}
+	where $\gamma>0$ and $\Gamma = \Gamma^{\top}\in\mathbb{R}^{l\times l}>0$ are control gains, and $P=P^{\top}\in\mathbb{R}^{6\times 6}>0$ is some constant matrix. Taking time derivative of (\ref{V1}) yields
+	\begin{align}
+	\dot{V}_{1} &= -s^{\top}K_{1}s + s^{\top}\left(\delta\left(Z\right)+d_{1w}(x,t) - \rho\text{Tanh}\left(\frac{s}{\epsilon}\right)\right) + s^{\top}\left(z_{1}+Cy\right) \nonumber \\
+	&\quad + \frac{1}{\gamma}\tr\left\{\tilde{W}^{\top}\left(\Gamma^{-1}\dot{\hat{W}}-\gamma\Lambda\left(\bar{Z}\right)s^{\top}\right)\right\} + z_{1}^{\top}\dot{z}_{1} + \dot{y}^{\top}Py + y^{\top}P\dot{y}. \label{V1dot1}
+	\end{align} 
+	It is known that
+	\begin{equation}
+	s^{\top}\left(\delta\left(Z\right)+d_{1w}(x,t) - \rho\text{Tanh}\left(\frac{s}{\epsilon}\right)\right) \leq \rho\sum_{i=1}^{2}\left(\left\vert s_{i}\right\vert - s_{i}\tanh\left(\frac{s_{i}}{\epsilon}\right)\right) \leq 2\rho c_{0}\epsilon \label{ineq1}
+	\end{equation}
+	with $c_{0}\approx 0.2875$, and by Young's Inequality, we also have
+	\begin{equation}
+	s^{\top}\left(z_{1}+Cy\right) \leq \left(\frac{1}{4\epsilon_{1}^{2}} +\frac{1}{4\epsilon_{2}^{2}}\right)s^{\top}s + \epsilon_{1}^{2}z_{1}^{\top}z_{1} + \epsilon_{2}^{2}y^{\top}C^{\top}Cy, \label{ineq2} 
+	\end{equation}
+	where $\epsilon_{i}$ are any real numbers. Based on (\ref{ydot}), we also have the following relation
+	\begin{align}
+	\dot{y}^{\top}Py + y^{\top}P\dot{y} &= \left[y^{\top}A^{\top} + \alpha^{\top}\left(A^{\top}+C^{\top}B^{\top}\right) - \dot{\alpha}^{\top}\right]Py \nonumber \\
+	& \quad + y^{\top}P\left[Ay+\left(A+BC\right)\alpha-\dot{\alpha}\right] \nonumber \\
+	& = y^{\top}\left(A^{\top}P+PA\right)y + \left[\alpha^{\top}\left(A^{\top}+C^{\top}B^{\top}\right)Py + y^{\top}P\left(A+BC\right)\alpha\right] \nonumber \\
+	& \quad -\left(\dot{\alpha}^{\top}Py+y^{\top}P\dot{\alpha}\right), \label{yPy}
+	\end{align}
+	To find a proper positive definite matrix $P$, we require that
+	\begin{equation}
+	\dot{y}^{\top}Py + y^{\top}P\dot{y} + \epsilon_{2}^{2}y^{\top}C^{\top}Cy \leq -y^{\top}Qy, \label{ineq3}
+	\end{equation}
+	where $Q=Q^{\top}\in\mathbb{B}^{6}>0$ is any positive definite matrix. To make (\ref{ineq3}) more feasible, we instead require that
+	\begin{equation}
+	\dot{y}^{\top}Py + y^{\top}P\dot{y} + \epsilon_{2}^{2}y^{\top}C^{\top}Cy \leq -y^{\top}Qy + \kappa_{1}\alpha^{\top}\alpha + \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha} \label{ineq4}
+	\end{equation}
+	with $\kappa_{1},\kappa_{2}>0$. Therefore, we rewrite (\ref{yPy}) as
+	\begin{equation}
+	\dot{y}^{\top}Py + y^{\top}P\dot{y} + y^{\top}\left(\epsilon_{2}^{2}C^{\top}C+Q\right)y- \kappa_{1}\alpha^{\top}\alpha - \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha}= Y^{\top}\Phi Y \leq 0,
+	\end{equation}
+	where $Y = \left[
+	\begin{array}[c]{ccc}
+	y^{\top} & \alpha^{\top} & \dot{\alpha}^{\top}
+	\end{array}
+	\right]^{\top}$, and 
+	\begin{align}
+	\Phi = \left[
+	\begin{array}[c]{ccc}
+	A^{\top}P+PA+\epsilon_{2}^{2}C^{\top}C+Q & P\left(A+BC\right) & -P \\
+	\star & -\kappa_{1}I_{6\times 6} & \textbf{0}_{6\times 6} \\
+	\star & \star & -\kappa_{2}I_{6\times 6}
+	\end{array}
+	\right] \leq 0. \label{LMI}
+	\end{align}
+	Solving the LMI (\ref{LMI}) along with $P>0$, $Q>0$ and some constant $\epsilon_{2}$ is capable of providing us with the required matrix $P$. By (\ref{ineq1}), (\ref{ineq2}) and (\ref{ineq4}), we now can rewrite (\ref{V1dot1}) as
+	\begin{align}
+	\dot{V}_{1} & \leq -s^{\top}\left(K_{1}-\left(\frac{1}{4\epsilon_{1}^{2}}+\frac{1}{4\epsilon_{2}^{2}}\right)I\right)s + z_{1}^{\top}\left(\dot{z}_{1}+\epsilon_{1}^{2}z_{1}\right) - y^{\top}Qy + 2\rho c_{0}\epsilon \nonumber \\ 
+	& \quad +\frac{1}{\gamma}\tr\left\{\tilde{W}^{\top}\left(\Gamma^{-1}\dot{\hat{W}}-\gamma\Lambda\left(\bar{Z}\right)s^{\top}\right)\right\} + \kappa_{1}\alpha^{\top}\alpha + \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha}.
+	\end{align}. \label{V1dot2}
+	
+	\begin{flushleft}
+		\textit{Step 2:}
+	\end{flushleft}	
+	
+	A RISE-typed controller is designed at this step. First we define two new filtered errors
+	\begin{equation}
+	z_{2} = \dot{z}_{1} + \sigma_{2}z_{1} \label{z2}
+	\end{equation}
+	and
+	\begin{equation}
+	r = \dot{z}_{2} + \sigma_{3}z_{2} + z_{1}, \label{r}
+	\end{equation}
+	where $\sigma_{i}>0$ are control gains. According to (\ref{z2})-(\ref{r}), it is clear that
+	\begin{equation}
+	\dot{z}_{1} = z_{2} - \sigma_{2}z_{1} \label{z1dot2}
+	\end{equation}
+	and
+	\begin{equation}
+	\dot{z}_{2} = r-\sigma_{3}z_{2} - z_{1}, \label{z2dot}
+	\end{equation}
+	
+	We use the last equation of (\ref{system}) and (\ref{r}) to derive that the open-loop equation of $r(t)$ is
+	\begin{equation}
+	J_{w}r = u + f_{2w}(x) + d_{2w}(t) + J_{w}\left(\sigma_{2}\dot{z}_{1}+\sigma_{3}z_{2}+z_{1}-\xi_{3}\right). \label{open-loop}
+	\end{equation}
+	Note that the derivation of (\ref{open-loop}) uses the facts that $\dot{z}_{1} = x_{4}-\xi_{2}$ based on (\ref{z1}) and $\ddot{z}_{1} = \dot{x}_{4} - \xi_{3}$. Similar to Step 1, we separate the unknown dynamics in (\ref{open-loop}) by the nominal models and the uncertain ones as follows:
+	\begin{align}
+	\begin{cases}
+	f_{2w}(x) &= \bar{f}_{2w}(x) + \underline{f}_{2w}(x) \\
+	J_{w} &= \bar{J}_{w} + \underline{J}_{w}
+	\end{cases}
+	\end{align}
+	Therefore, we rewrite (\ref{open-loop}) as
+	\begin{equation}
+	J_{w}r = u_{r} + S\left(x,\xi,t\right) + \underline{f}_{2w}\left(x_{1d},\dot{x}_{1d},\xi_{1},\xi_{2}\right) - \underline{J}_{w}\xi_{3} + d_{2w}(t), \label{open-loop2}
+	\end{equation}
+	where $u_{r} = u - \bar{f}_{2w}(x) - \bar{J}_{w}\left(\sigma_{2}\dot{z}_{1}+\sigma_{3}z_{2}+z_{1}-\xi_{3}\right)$, and the function 
+	\begin{equation}
+	S\left(x,\xi,t\right) = \underline{f}_{2w}\left(x_{1},x_{2},x_{3},x_{4}\right) - \underline{f}_{2w}\left(x_{1d},\dot{x}_{1d},\xi_{1},\xi_{2}\right) + \underline{J}_{w}\left(\sigma_{2}\dot{z}_{1}+\sigma_{3}z_{2}+z_{1}\right). \label{S}
+	\end{equation}
+
+	We develop the dynamics of $r(t)$ according to (\ref{open-loop2}) by
+	\begin{equation}
+	J_{w}\dot{r} = \dot{u}_{r} + \tilde{N}\left(x,\xi,t\right) -z_{2} + N_{d}\left(\xi,\alpha_{1},t\right), \label{rdot}
+	\end{equation}
+	where 
+	\begin{equation}
+	\tilde{N}\left(x,\xi,t\right) = \dot{S}\left(x,\xi,t\right) + z_{2}, \label{N_tilde}
+	\end{equation}
+	and 
+	\begin{equation}
+	N_{d}\left(\xi,\alpha_{1},t\right) = \dot{\underline{f}}_{2w}\left(x_{1d},\dot{x}_{1d},\xi_{1},\xi_{2}\right) - \underline{J}_{w}\dot{\xi}_{3} + \dot{d}_{2w}(t), \label{Nd}
+	\end{equation}
+	and design the RISE-typed controller
+	\begin{align}
+	\begin{cases}
+	u_{r} &= -K_{s}z_{2} + K_{s}z_{2}(0) - \int_{0}^{t}K_{s}\left(\sigma_{3}z_{2}\left(\tau\right) + z_{1}\left(\tau\right)\right) + \beta\sgn\left(z_{2}\left(\tau\right)\right) d\tau \\
+	u &= u_{r} + \bar{f}_{2w}(x) + \bar{J}_{w}\left(\sigma_{2}\dot{z}_{1}+\sigma_{3}z_{2}+z_{1}-\xi_{3}\right)
+	\end{cases}.  \label{ur}
+	\end{align}
+	Substituting (\ref{ur}) into (\ref{rdot}) hence gives
+	\begin{equation}
+	J_{w}\dot{r} = -K_{s}r + \tilde{N}\left(x,\xi,t\right) -z_{2} + \left(N_{d}\left(\xi,\alpha_{1},t\right)-\beta\sgn\left(z_{2}\right)\right). \label{rdot2}
+	\end{equation}
+	
+	Now, we define a new positive definite function
+	\begin{equation}
+	V = V_{1} + \frac{1}{2}z_{2}^{\top}z_{2} + \frac{1}{2}r^{\top}J_{w}r + H(t). \label{V}
+	\end{equation}
+	where 
+	\begin{equation}
+	H(t) = \xi_{b}-\int_{0}^{t}N_{d}(\tau)-\beta\sgn\left(z_{2}(\tau)\right)d\tau \geq 0
+	\end{equation}
+	with $\xi_{b}=\sum_{i=1}^{2}\left(\beta\left\vert z_{2i}(0)\right\vert - z_{2i}(0)N_{di}(0) \right)$ and the parameter $\beta \geq \left\Vert N_{d}\right\Vert_{\infty} + \frac{1}{\sigma_{3}}\left\Vert\dot{N}_{d}\right\Vert_{\infty}$. Time derivative of (\ref{V}) along (\ref{rdot2}) with (\ref{V1dot2}) and (\ref{z1dot2})-(\ref{z2dot}) simply yields
+	\begin{align}
+	\dot{V} &\leq -s^{\top}\left(K_{1}-\left(\frac{1}{4\epsilon_{1}^{2}}+\frac{1}{4\epsilon_{2}^{2}}\right)I\right)s - \left(\sigma_{2}-\epsilon_{1}^{2}\right)z_{1}^{\top}z_{1} - \sigma_{3}z_{2}^{\top}z_{2} + 2\rho c_{0}\epsilon \nonumber \\ 
+	& \quad - y^{\top}Qy - r^{\top}K_{s}r + r^{\top}\tilde{N} + +\frac{1}{\gamma}\tr\left\{\tilde{W}^{\top}\left(\Gamma^{-1}\dot{\hat{W}}-\gamma\Lambda\left(\bar{Z}\right)s^{\top}\right)\right\} \nonumber \\
+	& \quad + \kappa_{1}\alpha^{\top}\alpha + \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha}. \label{Vdot}
+	\end{align}
+	Since $\tilde{N}$ in (\ref{N_tilde}) is continuously differentiable, we can show that
+	\begin{equation}
+	r^{\top}\tilde{N} \leq \left\Vert r\right\Vert\phi\left(\left\Vert \iota\right\Vert\right)\left\Vert \iota\right\Vert \leq\phi\left(\left\Vert \iota\right\Vert\right)\left\Vert \iota\right\Vert^{2}, \label{rN_tilde}
+	\end{equation}
+	where $\iota = \left[
+	\begin{array}[c]{cccccc}
+	s^{\top} & z_{1}^{\top} & z_{2}^{\top} & y^{\top} & \left\Vert \tilde{W}\right\Vert & r^{\top} \\
+	\end{array}
+	\right]^{\top}$, and $\phi(\bullet)$ is some unknown positive definite function. We also design the following adaptive law for the online NN weight adaptation:
+	\begin{equation}
+	\dot{\hat{W}} = \gamma\Gamma\left[\Lambda\left(\bar{Z}\right)s^{\top} - \beta\hat{W}\right], \label{adaptive_law}
+	\end{equation} 
+	where $\beta>0$ is the adaptation gain. Now we apply the Young's Inequality
+	\begin{equation}
+	-\beta\tilde{W}\hat{W}\leq -\beta\left(1-\frac{1}{4\varepsilon^2}\right)\tilde{W}^{\top}\tilde{W} + \beta\varepsilon^{2}W^{\top}W
+	\end{equation}
+	with $\varepsilon>0$ being some constant, then substitute (\ref{rN_tilde})-(\ref{adaptive_law}) into (\ref{Vdot}) and finally obtain
+	\begin{equation}
+	\dot{V}\leq -\left(a_{1} - \phi\left(\left\Vert \iota\right\Vert\right)\right)\left\Vert \iota\right\Vert^{2} + \kappa_{1}\alpha^{\top}\alpha + \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha} + 2\rho c_{0}\epsilon + \beta\varepsilon^{2}W^{\top}W, \label{Vdot2}
+	\end{equation}
+	where $a_{1}=\min\left\{K_{1}-\left(\frac{1}{e\epsilon_{1}^{2}}+\frac{1}{4\epsilon_{2}^{2}}\right)I, \sigma_{2}-\epsilon_{1}^{2},\sigma_{3},\lambda_{\min}\left(Q\right), \beta\left(1-\frac{1}{4\varepsilon_{2}}\right),\lambda_{\min}\left(K_{s}\right)\right\}$ with $\lambda_{\min}\left(\bullet\right)$ representing the minimum eigenvalue of the matrix $\bullet$. Using standard boundedness analysis in \cite{Swar:00}, we know that $\left\Vert\iota\right\Vert$ is semi-globally uniformly bounded by
+	\begin{equation}
+	\left\Vert\iota\right\Vert \leq \sqrt{\frac{D}{a_{1} - \phi\left(\left\Vert \iota\right\Vert\right)}}, \label{bound}
+	\end{equation}  
+	where $D$ is a constant for the boundedness of $\kappa_{1}\alpha^{\top}\alpha + \kappa_{2}\dot{\alpha}^{\top}\dot{\alpha} + 2\rho c_{0}\epsilon + \beta\varepsilon^{2}W^{\top}W$ under the semi-global conditions. Note that the control parameter is capable of picking $a_{1}$ arbitrarily large. As a result, the boundedness of $\left\Vert\iota\right\Vert$ can be arbitrarily small. Therefore, the boundedness of $\left\Vert s\right\Vert$ can be established by
+	\begin{equation}
+	\left\Vert s\right\Vert \leq \sqrt{\frac{D}{a_{1} - \phi\left(\left\Vert \iota\right\Vert\right)}}
+	\end{equation}
+	and can be arbitrarily small by proper control gain schedule. Finally, according to (\ref{s}), we can conclude that both $e(t)$ and $\dot{e}(t)$ are bounded. More specifically, we have
+	\begin{equation}
+	\left\Vert e(t)\right\Vert \leq e^{-\sigma_{1}t}e(0) + \frac{1}{\sigma_{1}}\sqrt{\frac{D}{a_{1} - \phi\left(\left\Vert \iota\right\Vert\right)}}\left(1-e^{-\sigma_{1}t}\right).
+	\end{equation}
+	
+	
+	% Here's where you specify the bibliography style file.
+	% The full file name for the bibliography style file 
+	% used for an ASME paper is asmems4.bst.
+	\bibliographystyle{asmems4}
+	
+	% Here's where you specify the bibliography database file.
+	% The full file name of the bibliography database for this
+	% article is asme2e.bib. The name for your database is up
+	% to you.
+	\bibliography{asme2e}
+	
+	
+	
+	
+\end{document}
