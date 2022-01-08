@@ -1,2 +1,13 @@
 **/slprj
 **/*.mat
+**/*.log
+**/*.tex
+**/*.blg
+**/*.bib
+**/*.bbl
+**/*.aux
+**/*.bst
+**/*.gz
+**/*.slxc
+**/*.autosave
+**/*.asv
