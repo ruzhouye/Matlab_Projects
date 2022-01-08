@@ -131,9 +131,6 @@ xi_0 = zeros(6,1);
 sim_time = 30;
 sim('RISE.slx')
 save('RISE_Data','x','ref','u','e1','z1','filter_out','alpha_1','W_hat')
-
-%% Data Analysis
-load('RISE_Data.mat')
 t = x.time;
 x_data = x.data;
 ref_data = ref.data;
@@ -143,6 +140,8 @@ z1_data = z1.data;
 filter_out_data = filter_out.data;
 alpha_1_data = alpha_1.data;
 W_hat_data = W_hat.data;
+
+%% Data Analysis
 % plot - x
 figure
 for i = 1:(size(x_data,2)/2)
